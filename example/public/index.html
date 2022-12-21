@@ -28,9 +28,9 @@
 			width: 100%;
 		}
 
-        #main-vscroll {
-            margin-top: 40px;
-        }
+		#main-vscroll {
+			margin-top: 40px;
+		}
 
 		#cursor-reset {
 			border: 1px solid grey;
@@ -56,18 +56,25 @@
 </head>
 
 <body>
-	<div id='demoContainer'>
-		<div id='main'></div>
-        <div id='main-vscroll'></div>
-	</div>
-	<div id='test-button-row'>
-		<div id='test-buttons'>
-			<div id='cursor-reset'>Reset selection cursors</div>
-		</div>
-	</div>
-	<script type="text/javascript" src="./bundle.js" charset="utf-8">
+<div id='demoContainer'>
+	<div id='main'></div>
+	<div id='main-vscroll'></div>
+</div>
+<!--	<div id='test-button-row'>-->
+<!--		<div id='test-buttons'>-->
+<!--			<div id='cursor-reset'>Reset selection cursors</div>-->
+<!--		</div>-->
+<!--	</div>-->
+<div class="file-select">
+	<label for="file-load">Choose a profile trace:</label>
+	<input
+			type="file"
+			id="file-load"
+			name="avatar" />
+</div>
+<script type="text/javascript" src="./../lib/bundle.js" charset="utf-8">
 
-	</script>
+</script>
 </body>
 
 </html>

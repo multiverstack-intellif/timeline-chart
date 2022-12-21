@@ -3,18 +3,18 @@ import { TimeGraphChart } from "timeline-chart/lib/layer/time-graph-chart";
 import { TimeGraphUnitController } from "timeline-chart/lib/time-graph-unit-controller";
 import { TimeGraphRowController } from "timeline-chart/lib/time-graph-row-controller";
 import { TimeGraphNavigator } from "timeline-chart/lib/layer/time-graph-navigator";
+import { TimeGraphContainer } from "timeline-chart/lib/time-graph-container";
 import { TimeGraphChartCursors } from "timeline-chart/lib/layer/time-graph-chart-cursors";
 import { TimeGraphChartSelectionRange } from "timeline-chart/lib/layer/time-graph-chart-selection-range";
 import { TimeGraphAxisCursors } from "timeline-chart/lib/layer/time-graph-axis-cursors";
-import { TimeGraphContainer } from "timeline-chart/lib/time-graph-container";
 // import { timeGraph } from "timeline-chart/lib/test-data";
 import { TimelineChart } from "timeline-chart/lib/time-graph-model";
 import { TimeGraphStateStyle } from "timeline-chart/lib/components/time-graph-state";
-import { TestDataProvider } from "./test-data-provider";
 import { TimeGraphChartGrid } from "timeline-chart/lib/layer/time-graph-chart-grid";
 import { TimeGraphVerticalScrollbar } from "timeline-chart/lib/layer/time-graph-vertical-scrollbar";
 import { TimeGraphChartArrows } from "timeline-chart/lib/layer/time-graph-chart-arrows";
 import { TimeGraphRangeEventsLayer } from "timeline-chart/lib/layer/time-graph-range-events-layer";
+import {TraceDataProvider} from "./trace-data-provider";
 
 const styleConfig = {
     mainWidth: 1000,
@@ -33,10 +33,12 @@ if (!container) {
 container.innerHTML = '';
 container.style.width = styleConfig.mainWidth + "px";
 
-const testDataProvider = new TestDataProvider(styleConfig.mainWidth);
+const testDataProvider = new TraceDataProvider();
+
+// const testDataProvider = new TestDataProvider(styleConfig.mainWidth);
 let timeGraph = testDataProvider.getData({});
 const unitController = new TimeGraphUnitController(timeGraph.totalLength);
-unitController.worldRenderFactor = 3;
+// const unitController = new TimeGraphUnitController(BigInt(5000))
 unitController.numberTranslator = (theNumber: bigint) => {
     let num = theNumber.toString();
     if (num.length > 6) {
@@ -55,7 +57,11 @@ const providers = {
         };
     },
     dataProvider: (range: TimelineChart.TimeGraphRange, resolution: number) => {
-        const newRange: TimelineChart.TimeGraphRange = range;
+        const length = range.end - range.start;
+        const overlap = length * BigInt(10);
+        const start = range.start - overlap > BigInt(0) ? range.start - overlap : BigInt(0);
+        const end = range.end + overlap < unitController.absoluteRange ? range.end + overlap : unitController.absoluteRange;
+        const newRange: TimelineChart.TimeGraphRange = { start, end };
         const newResolution: number = resolution * 0.1;
         timeGraph = testDataProvider.getData({ range: newRange, resolution: newResolution });
         return {
@@ -129,9 +135,8 @@ const timeGraphAxisContainer = new TimeGraphContainer({
 }, unitController, axisCanvas);
 axisHTMLContainer.appendChild(timeGraphAxisContainer.canvas);
 
-const timeAxisCursors = new TimeGraphAxisCursors('timeGraphAxisCursors', { color: styleConfig.cursorColor });
 const timeAxisLayer = new TimeGraphAxis('timeGraphAxis', { color: styleConfig.naviBackgroundColor, verticalAlign: 'bottom'});
-timeGraphAxisContainer.addLayers([timeAxisLayer, timeAxisCursors]);
+timeGraphAxisContainer.addLayers([timeAxisLayer]);
 
 const chartHTMLContainer = document.createElement('div');
 chartHTMLContainer.id = 'main_chart';
@@ -151,12 +156,13 @@ chartHTMLContainer.appendChild(timeGraphChartContainer.canvas);
 const timeGraphChartGridLayer = new TimeGraphChartGrid('timeGraphGrid', rowHeight);
 const timeGraphChart = new TimeGraphChart('timeGraphChart', providers, rowController);
 const timeGraphChartArrows = new TimeGraphChartArrows('timeGraphChartArrows', rowController);
+const timeAxisCursors = new TimeGraphAxisCursors('timeGraphAxisCursors', { color: styleConfig.cursorColor });
 const timeGraphSelectionRange = new TimeGraphChartSelectionRange('chart-selection-range', { color: styleConfig.cursorColor });
 const timeGraphChartCursors = new TimeGraphChartCursors('chart-cursors', timeGraphChart, rowController, { color: styleConfig.cursorColor });
 const timeGraphChartRangeEvents = new TimeGraphRangeEventsLayer('timeGraphChartRangeEvents', providers);
 
 timeGraphChartContainer.addLayers([timeGraphChartGridLayer, timeGraphChart,
-    timeGraphChartArrows, timeGraphSelectionRange,
+    timeGraphChartArrows, timeAxisCursors, timeGraphSelectionRange,
     timeGraphChartCursors, timeGraphChartRangeEvents]);
 
 timeGraphChart.registerMouseInteractions({
@@ -180,12 +186,12 @@ timeGraphChart.registerMouseInteractions({
 timeGraphChartArrows.addArrows(timeGraph.arrows, testDataProvider.getRowIds());
 timeGraphChartRangeEvents.addRangeEvents(timeGraph.rangeEvents);
 
-const cursorReset = document.getElementById('cursor-reset');
-if (cursorReset) {
-    cursorReset.addEventListener('click', () => {
-        timeGraphChartCursors.removeCursors();
-    });
-}
+// const cursorReset = document.getElementById('cursor-reset');
+// if (cursorReset) {
+//     cursorReset.addEventListener('click', () => {
+//         timeGraphChartCursors.removeCursors();
+//     });
+// }
 
 const naviEl = document.createElement('div');
 naviEl.id = 'navi';
@@ -211,4 +217,24 @@ if (vscrollElement) {
     const vscroll = new TimeGraphVerticalScrollbar('timeGraphVerticalScrollbar', rowController);
     verticalScrollContainer.addLayers([vscroll]);
     vscrollElement.appendChild(verticalScrollContainer.canvas);
+}
+
+
+const fileInput = document.getElementById('file-load');
+const reader = new FileReader();
+reader.addEventListener('load', (e) => {
+    if (reader.result && typeof reader.result === 'string') {
+        let newArr = JSON.parse(reader.result);
+        testDataProvider.setData(newArr);
+        unitController.viewRange = {start:BigInt(0), end: BigInt(6000)}
+        timeGraphChart.updateChart();
+    }
+})
+if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+        const target = e.target as HTMLInputElement
+        if (target && target.files) {
+            reader.readAsText(target.files[0]);
+        }
+    });
 }
